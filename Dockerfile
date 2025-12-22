@@ -9,10 +9,10 @@ COPY pyproject.toml poetry.lock ./
 
 #Установка зависимостей
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --only main
+    && poetry install --no-interaction --no-ansi --only main --no-root
 
 #Копия кода
-COPY ..
+COPY . .
 
 #Открытие порта
 EXPOSE 8000
