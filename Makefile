@@ -1,5 +1,5 @@
 run:
-	poetry run uvicorn main:app --reload
+	poetry run uvicorn app.main:app --reload
 
 IMAGE_NAME = marketplace-app
 
