@@ -1,26 +1,30 @@
-from fastapi import FastAPI, Depends
-
-from app import db
-from app.models import Articles
-from app.schemas import ArticleCreate, ArticleRead
+from fastapi import FastAPI, Depends, HTTPException, status
+from sqlalchemy import select
+from app.models import Articles, Users
+from app.schemas import ArticleCreate, ArticleRead, UserRead, UserCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db import async_session_maker, engine
-from app.models import Base
+from app.db import get_db
+from app.auth import hash_password
 app = FastAPI()
 
 
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        # Эта команда создаст все таблицы (articles и другие),
-        # если их еще нет в базе данных.
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def get_db():
-    async with async_session_maker() as session:
-        yield session
-
+@app.post('/register', response_model = UserRead, status_code=status.HTTP_201_CREATED)
+async def register_user(
+        user_data : UserCreate,
+        db : AsyncSession = Depends(get_db)
+):
+    query = select(Users).where(Users.email == user_data.email)
+    result = await db.execute(query)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code = 400, detail = "Такой пользователь уже существует")
+    new_user = Users(
+        email = user_data.email,
+        hashed_password = hash_password(user_data.password)
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+    return new_user
 @app.post("/articles", response_model=ArticleRead)
 async def create_articles(
         article_data : ArticleCreate,
