@@ -25,7 +25,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Оффлайн режим"""
-    url = os.getenv("ALEMBIC_DATABASE_URL")
+    url = os.getenv("DATABASE_URL")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -41,9 +41,14 @@ def run_migrations_online() -> None:
     """Онлайн режим (наш случай)"""
 
     # Берем URL напрямую из .env
-    database_url = os.getenv("ALEMBIC_DATABASE_URL")
+    database_url = os.getenv("DATABASE_URL")
 
-    # Создаем движок вручную, игнорируя пустую строку в alembic.ini
+    # --- ИСПРАВЛЕНИЕ ---
+    # Если используется asyncpg, заменяем его на psycopg для синхронной работы Alembic
+    if database_url and database_url.startswith("postgresql+asyncpg"):
+        database_url = database_url.replace("+asyncpg", "+psycopg")
+    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
     connectable = create_engine(
         database_url,
         poolclass=pool.NullPool,
