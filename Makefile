@@ -45,7 +45,7 @@ down:
 
 # --- Локальный запуск ---
 # Эта команда запускает приложение на хост-машине, но зависит от сервисов (например, БД) из docker-compose
-run-local: up
+run: up
 	$(PYTHON) -m uvicorn app.main:app --reload
 
 # --- Alembic миграции ---

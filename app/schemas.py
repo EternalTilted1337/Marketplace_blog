@@ -21,6 +21,7 @@ class ArticleCreate(BaseModel):
 class ArticleRead(ArticleCreate):
     id: int
     created_at: datetime
+    owner_id: int
     model_config = {"from_attributes": True}
 
 
