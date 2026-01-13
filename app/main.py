@@ -92,7 +92,6 @@ async def get_my_articles(
     return result.scalars().all()
 
 
-
 @app.get(
     "/articles",
     response_model=list[ArticleRead],
@@ -109,12 +108,26 @@ async def get_articles(
     """
     query = select(Articles)
     if search:
-        query = query.where(Articles.title.icontains(search))
-
+        query = query.where(Articles.title.ilike(f"%{search}%"))
     query = query.limit(limit).offset(offset)
     result = await db.execute(query)
     return result.scalars().all()
 
+
+@app.get(
+    "/articles/{article_id}",
+    response_model=ArticleRead,
+    summary="Получение статьи по id",
+)
+async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Возвращает статью по её id
+    """
+    result = await db.execute(select(Articles).where(Articles.id == article_id))
+    article = result.scalar_one_or_none()
+    if not article:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+    return article
 
 
 @app.put(
@@ -144,7 +157,6 @@ async def update_article(
     await db.commit()
     await db.refresh(article)
     return article
-
 
 
 @app.delete("/articles/{article_id}", status_code=204, summary="Удалить статью")
