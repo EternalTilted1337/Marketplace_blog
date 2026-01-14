@@ -18,11 +18,7 @@ class ArticleCreate(BaseModel):
     is_published: bool = False
 
 
-class ArticleRead(ArticleCreate):
-    id: int
-    created_at: datetime
-    owner_id: int
-    model_config = {"from_attributes": True}
+
 
 
 class UserBase(BaseModel):
@@ -38,3 +34,9 @@ class UserRead(UserBase):
 
     class Config:
         from_attributes = True
+
+class ArticleRead(ArticleCreate):
+    id: int
+    created_at: datetime
+    owner: UserRead | None = None
+    model_config = {"from_attributes": True}
