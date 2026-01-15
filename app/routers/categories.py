@@ -13,7 +13,7 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
     "/",
     response_model=CategoryRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Получить список всех категорий",
+    summary="Создать новую категорию"
 )
 async def create_category(
     category_data: CategoryCreate, db: AsyncSession = Depends(get_db)
@@ -41,7 +41,7 @@ async def create_category(
     "/",
     response_model=List[CategoryRead],
     status_code=status.HTTP_200_OK,
-    summary="Создать новую категорию",
+    summary="Получить список всех категорий",
 )
 async def get_categories(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Categories))
