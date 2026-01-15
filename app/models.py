@@ -18,6 +18,7 @@ class Articles(Base):
     is_published: Mapped[bool | None] = mapped_column(default=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     owner: Mapped["Users"] = relationship("Users", back_populates="articles")
+    comments: Mapped[list["Comments"]] = relationship(back_populates="article")
 
 
 class Users(Base):
@@ -30,3 +31,19 @@ class Users(Base):
     articles: Mapped[list["Articles"]] = relationship(
         "Articles", back_populates="owner"
     )
+    comments: Mapped[list["Comments"]] = relationship(back_populates="author")
+
+
+class Comments(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    article_id: Mapped[int] = mapped_column(
+        ForeignKey("articles.id", ondelete="CASCADE")
+    )
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    article: Mapped["Articles"] = relationship(back_populates="comments")
+    author: Mapped["Users"] = relationship(back_populates="comments")

@@ -8,10 +8,10 @@ from app.db import get_db
 from app.models import Articles, Users
 from app.schemas import ArticleCreate, ArticleRead
 from sqlalchemy.orm import selectinload
-router = APIRouter(
-    prefix='/articles',
-    tags= ["Articles"]
-)
+
+router = APIRouter(prefix="/articles", tags=["Articles"])
+
+
 @router.post("/", response_model=ArticleRead, summary="Создать новую статью")
 async def create_articles(
     article_data: ArticleCreate,
@@ -33,9 +33,7 @@ async def create_articles(
     return new_article
 
 
-@router.get(
-    "/my", response_model=list[ArticleRead], summary="Получение моих статей"
-)
+@router.get("/my", response_model=list[ArticleRead], summary="Получение моих статей")
 async def get_my_articles(
     db: AsyncSession = Depends(get_db), current_user: Users = Depends(get_current_user)
 ):
@@ -78,7 +76,11 @@ async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db))
     """
     Возвращает статью по её id
     """
-    query = select(Articles).where(Articles.id == article_id).options(selectinload(Articles.owner))
+    query = (
+        select(Articles)
+        .where(Articles.id == article_id)
+        .options(selectinload(Articles.owner))
+    )
     result = await db.execute(query)
     article = result.scalar_one_or_none()
     if not article:
@@ -86,9 +88,7 @@ async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db))
     return article
 
 
-@router.put(
-    "/{article_id}", response_model=ArticleRead, summary="Обновление статьи"
-)
+@router.put("/{article_id}", response_model=ArticleRead, summary="Обновление статьи")
 async def update_article(
     article_id: int,
     article_data: ArticleCreate,

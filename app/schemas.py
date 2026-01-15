@@ -18,9 +18,6 @@ class ArticleCreate(BaseModel):
     is_published: bool = False
 
 
-
-
-
 class UserBase(BaseModel):
     email: EmailStr
 
@@ -35,8 +32,27 @@ class UserRead(UserBase):
     class Config:
         from_attributes = True
 
+
 class ArticleRead(ArticleCreate):
     id: int
     created_at: datetime
     owner: UserRead | None = None
     model_config = {"from_attributes": True}
+
+
+class CommentBase(BaseModel):
+    content: str
+
+
+class CommentCreate(CommentBase):
+    pass
+
+
+class CommentRead(CommentBase):
+    id: int
+    content: str
+    article_id: int
+    author_id: int
+
+    class Config:
+        from_attributes = True

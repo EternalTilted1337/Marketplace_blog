@@ -1,4 +1,4 @@
-from fastapi import  Depends, HTTPException, status, APIRouter
+from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,10 +12,7 @@ from app.db import get_db
 from app.models import Users
 from app.schemas import UserRead, UserCreate, Token
 
-router = APIRouter(
-    prefix='/auth',
-    tags= ["Authentication"]
-)
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post(

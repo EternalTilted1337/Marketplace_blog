@@ -53,7 +53,7 @@ migrate:
 	$(PYTHON) -m alembic upgrade head
 
 # Добавлено значение по умолчанию для `msg`, чтобы избежать ошибок
-msg ?= "New migration"
+
 create:
 	$(PYTHON) -m alembic revision --autogenerate -m "$(msg)"
 
