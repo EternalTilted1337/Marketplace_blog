@@ -9,6 +9,9 @@ from app.models import Articles, Users
 from app.schemas import ArticleCreate, ArticleRead
 from sqlalchemy.orm import selectinload
 
+# Импортируем нашу задачу Celery
+from app.tasks import process_new_article_notification
+
 router = APIRouter(prefix="/articles", tags=["Articles"])
 
 
@@ -30,6 +33,10 @@ async def create_articles(
     db.add(new_article)
     await db.commit()
     await db.refresh(new_article)
+
+    # Отправляем задачу в Celery
+    process_new_article_notification.delay(new_article.id, new_article.title)
+
     return new_article
 
 

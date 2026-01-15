@@ -73,3 +73,12 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+async def authenticate_user(email: str, password: str, db: AsyncSession):
+    result = await db.execute(select(Users).where(Users.email == email))
+    user = result.scalar_one_or_none()
+    if not user():
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user

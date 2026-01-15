@@ -16,6 +16,9 @@ class ArticleCreate(BaseModel):
     title: str = Field(..., min_length=2, max_length=50)
     content: str
     is_published: bool = False
+    category_id: int
+
+
 
 
 class UserBase(BaseModel):
@@ -53,6 +56,15 @@ class CommentRead(CommentBase):
     content: str
     article_id: int
     author_id: int
+
+    class Config:
+        from_attributes = True
+
+class CategoryCreate(BaseModel):
+    name: str
+
+class CategoryRead(CategoryCreate):
+    id: int
 
     class Config:
         from_attributes = True
