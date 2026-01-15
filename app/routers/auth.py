@@ -7,7 +7,7 @@ from app.core.security import (
     hash_password,
     verify_password,
     create_access_token,
-    authenticate_user
+    authenticate_user,
 )
 from app.db import get_db
 from app.models import Users
@@ -60,31 +60,29 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post('/login')
+@router.post("/login")
 async def login(
-        response: Response,
-        form_data: OAuth2PasswordRequestForm = Depends(),
-        db: AsyncSession = Depends(get_db)
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
 ):
     # 1. Проверяем пользователя
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Неверный логин или пароль'
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный логин или пароль"
         )
 
     # 2. Создаем токен (проверь название функции: обычно create_access_token)
-    access_token = create_access_token(data={'sub': user.email})
+    access_token = create_access_token(data={"sub": user.email})
 
     # 3. Устанавливаем куку (исправлено response и set_cookie)
     response.set_cookie(
-        key='access_token',
-        value=f'Bearer {access_token}',  # Пишется Bearer (Носитель), а не Beaver (Бобер) :)
+        key="access_token",
+        value=f"Bearer {access_token}",  # Пишется Bearer (Носитель), а не Beaver (Бобер) :)
         httponly=True,
         max_age=3600,
-        samesite='lax'
+        samesite="lax",
     )
 
-    return {'message': 'Успешная авторизация'}
-
+    return {"message": "Успешная авторизация"}

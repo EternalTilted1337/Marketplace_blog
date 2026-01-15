@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
 
 
+# Токен
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -12,15 +13,7 @@ class TokenData(BaseModel):
     email: Optional[str] = None
 
 
-class ArticleCreate(BaseModel):
-    title: str = Field(..., min_length=2, max_length=50)
-    content: str
-    is_published: bool = False
-    category_id: int
-
-
-
-
+# Юзер
 class UserBase(BaseModel):
     email: EmailStr
 
@@ -31,18 +24,48 @@ class UserCreate(UserBase):
 
 class UserRead(UserBase):
     id: int
-
-    class Config:
-        from_attributes = True
-
-
-class ArticleRead(ArticleCreate):
-    id: int
-    created_at: datetime
-    owner: UserRead | None = None
     model_config = {"from_attributes": True}
 
 
+# Категории
+class CategoryCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=50)
+
+
+class CategoryRead(CategoryCreate):
+    id: int
+
+    model_config = {"from_attributes": True}
+
+
+# Ариткуль
+
+
+class ArticleCreate(BaseModel):
+    title: str = Field(..., min_length=2, max_length=50)
+    content: str
+    category_id: int
+    image_url: Optional[str] = None
+    is_published: bool = False
+
+
+class ArticleRead(BaseModel):
+    id: int
+    title: str
+    content: str
+    image_url: Optional[str]
+    is_published: bool
+    created_at: datetime
+    update_at: datetime
+    category_id: int
+    owner_id: int
+    category: Optional[CategoryRead] = None
+    owner: Optional[UserRead] = None
+
+    model_config = {"from_attributes": True}
+
+
+# Комменты
 class CommentBase(BaseModel):
     content: str
 
@@ -57,14 +80,4 @@ class CommentRead(CommentBase):
     article_id: int
     author_id: int
 
-    class Config:
-        from_attributes = True
-
-class CategoryCreate(BaseModel):
-    name: str
-
-class CategoryRead(CategoryCreate):
-    id: int
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

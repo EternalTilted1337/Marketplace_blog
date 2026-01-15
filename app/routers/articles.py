@@ -1,15 +1,15 @@
-from fastapi import Depends, HTTPException, APIRouter
-from sqlalchemy import select
+from fastapi import Depends, HTTPException, APIRouter, status, Form, UploadFile, File
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.s3 import upload_image_to_s3
 from app.core.security import (
     get_current_user,
 )
 from app.db import get_db
-from app.models import Articles, Users
+from app.models import Articles, Users, Categories, DeleteArticles
 from app.schemas import ArticleCreate, ArticleRead
 from sqlalchemy.orm import selectinload
-
-# Импортируем нашу задачу Celery
 from app.tasks import process_new_article_notification
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
@@ -17,24 +17,37 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 
 @router.post("/", response_model=ArticleRead, summary="Создать новую статью")
 async def create_articles(
-    article_data: ArticleCreate,
+    title: str = Form(...),
+    content: str = Form(...),
+    category_id: int = Form(...),
+    is_published: bool = Form(False),
+    image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: Users = Depends(get_current_user),
 ):
     """
     Создает новую публикацию и привязывает её к текущему пользователю.
     """
+    category_stmt = select(Categories).where(Categories.id == category_id)
+    result = await db.execute(category_stmt)
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Категория не найдена")
+    try:
+        image_url = await upload_image_to_s3(image)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка загрузки изображения в S3")
     new_article = Articles(
-        title=article_data.title,
-        content=article_data.content,
-        is_published=article_data.is_published,
+        title=title,
+        content=content,
+        category_id=category_id,
+        image_url=image_url,
         owner_id=current_user.id,
+        is_published=is_published,
     )
     db.add(new_article)
     await db.commit()
     await db.refresh(new_article)
 
-    # Отправляем задачу в Celery
     process_new_article_notification.delay(new_article.id, new_article.title)
 
     return new_article
@@ -59,17 +72,29 @@ async def get_my_articles(
 )
 async def get_articles(
     db: AsyncSession = Depends(get_db),
-    limit: int = 10,
-    offset: int = 0,
+    page_number: int = 1,
+    page_size: int = 10,
     search: str | None = None,
+    category_id: int | None = None,
 ):
     """
-    Возвращение всех статей
+    Возвращает список статей с полнотекстовым поиском Postgres и пагинацией по страницам.
     """
-    query = select(Articles)
+    if page_size > 100:
+        page_size = 100
+    offset = (page_number - 1) * page_size
+    query = select(Articles).options(
+        selectinload(Articles.category),
+        selectinload(Articles.owner)
+    )
+    if category_id:
+        query = query.where(Articles.category_id == category_id)
     if search:
-        query = query.where(Articles.title.ilike(f"%{search}%"))
-    query = query.limit(limit).offset(offset)
+        search_vector = func.to_tsvector('russian', Articles.title + ' ' + Articles.content)
+        search_query = func.plainto_tsquery('russian', search)
+        query = query.where(search_vector.op('@@')(search_query))
+    query = query.order_by(Articles.created_at.desc()).limit(page_size).offset(offset)
+
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -139,6 +164,10 @@ async def delete_article(
         raise HTTPException(
             status_code=403, detail="Нет прав на удаление этой статьи. Вы не автор"
         )
+    delete_log = DeleteArticles(
+        title=article.title, content=article.content, owner_id=article.owner_id
+    )
+    db.add(delete_log)
     await db.delete(article)
     await db.commit()
     return None
