@@ -1,7 +1,4 @@
 from fastapi import FastAPI, Request
-
-from app.core.middleware import AuthCookieMiddleware
-from app.routers import articles
 from app.routers.auth import router as auth_router
 from app.routers.articles import router as articles_router
 from app.routers.comments import router as comments_router

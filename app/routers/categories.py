@@ -13,7 +13,7 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
     "/",
     response_model=CategoryRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Создать новую категорию"
+    summary="Создать новую категорию",
 )
 async def create_category(
     category_data: CategoryCreate, db: AsyncSession = Depends(get_db)
@@ -46,3 +46,34 @@ async def create_category(
 async def get_categories(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Categories))
     return result.scalars().all()
+
+
+@router.get('/{category_id}', response_model=CategoryRead)
+async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
+    category = await db.get(Categories, category_id)
+    if not category:
+        raise HTTPException(status_code = 404, detail= 'Категория не найдена')
+    return category
+
+@router.patch("/{category_id}", response_model=CategoryRead)
+async def update_category(
+        category_id: int,
+        category_data: CategoryCreate,
+        db: AsyncSession = Depends(get_db),
+):
+    category = await db.get(Categories, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail='Категория не найдена')
+    category.name = category_data.name
+    await db.commit()
+    await db.refresh(category)
+    return category
+
+@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_category(category_id: int, db: AsyncSession = Depends(get_db)):
+    category = await db.get(Categories, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail='Категория не найдена')
+    await db.delete(category)
+    await db.commit()
+    return None

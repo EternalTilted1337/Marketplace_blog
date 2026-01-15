@@ -1,5 +1,5 @@
-from fastapi import Depends, HTTPException, APIRouter, status, Form, UploadFile, File
-from sqlalchemy import select, or_, func
+from fastapi import Depends, HTTPException, APIRouter, Form, UploadFile, File
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.s3 import upload_image_to_s3
@@ -34,8 +34,8 @@ async def create_articles(
         raise HTTPException(status_code=404, detail="Категория не найдена")
     try:
         image_url = await upload_image_to_s3(image)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка загрузки изображения в S3")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Ошибка загрузки изображения в S3")
     new_article = Articles(
         title=title,
         content=content,
@@ -84,15 +84,16 @@ async def get_articles(
         page_size = 100
     offset = (page_number - 1) * page_size
     query = select(Articles).options(
-        selectinload(Articles.category),
-        selectinload(Articles.owner)
+        selectinload(Articles.category), selectinload(Articles.owner)
     )
     if category_id:
         query = query.where(Articles.category_id == category_id)
     if search:
-        search_vector = func.to_tsvector('russian', Articles.title + ' ' + Articles.content)
-        search_query = func.plainto_tsquery('russian', search)
-        query = query.where(search_vector.op('@@')(search_query))
+        search_vector = func.to_tsvector(
+            "russian", Articles.title + " " + Articles.content
+        )
+        search_query = func.plainto_tsquery("russian", search)
+        query = query.where(search_vector.op("@@")(search_query))
     query = query.order_by(Articles.created_at.desc()).limit(page_size).offset(offset)
 
     result = await db.execute(query)

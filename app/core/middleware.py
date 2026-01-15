@@ -20,7 +20,7 @@ class AuthCookieMiddleware(BaseHTTPMiddleware):
         try:
             # Просто проверка на валидность (секрет из env)
             jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
-        except:
+        except jwt.PyJWTError:
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
         return await call_next(request)
