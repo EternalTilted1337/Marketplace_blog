@@ -56,7 +56,7 @@ class ArticleRead(BaseModel):
     image_url: Optional[str]
     is_published: bool
     created_at: datetime
-    update_at: datetime
+    updated_at: datetime
     category_id: int
     owner_id: int
     category: Optional[CategoryRead] = None

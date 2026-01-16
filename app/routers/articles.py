@@ -50,6 +50,7 @@ async def create_articles(
 
     process_new_article_notification.delay(new_article.id, new_article.title)
 
+    await db.refresh(new_article, ["category", "owner"])  # Подгружаем связанные модели
     return new_article
 
 
