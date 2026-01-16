@@ -1,5 +1,7 @@
+import smtplib
+from email.message import EmailMessage
 from app.core.celery import celery_app
-
+import os
 
 @celery_app.task
 def process_new_article_notification(article_id: int, title: str):
@@ -17,8 +19,22 @@ def process_new_article_notification(article_id: int, title: str):
 @celery_app.task
 def send_registration_email(email: str):
     """
-    Отправляет email-уведомление о регистрации.
+    Реальная отправка email-уведомления через SMTP (MailHog).
     """
-    print(f"Отправка письма о регистрации на адрес: {email}")
-    print("Письмо успешно 'отправлено'.")
-    return f"Письмо для {email} отправлено."
+    smtp_host = os.getenv("SMTP_HOST", "127.0.0.1")
+    smtp_port = int(os.getenv("SMTP_PORT", 1025))
+
+    msg = EmailMessage()
+    msg["Subject"] = "Регистрация в Marketplace Blog"
+    msg["From"] = "admin@marketplace.com"
+    msg["To"] = email
+    msg.set_content(f"Поздравляем! Вы успешно зарегистрированы на нашей платформе с адресом {email}.")
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.send_message(msg)
+        print(f"Успешно отправлено письмо на {email}")
+        return f"Email sent to {email}"
+    except Exception as e:
+        print(f"Ошибка при отправке почты: {e}")
+        return f"Error: {e}"

@@ -5,7 +5,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 from app.db import get_db
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,34 +52,36 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
+    request: Request,
+    db : AsyncSession = Depends(get_db)
 ):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Не удалось проверить токен",
-        headers={"WWW-Authenticate": "Bearer"},
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Вы не авторизованы",
     )
+    token = request.cookies.get('access_token')
+    if not token:
+        raise credentials_exception
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        email: str = payload.get('sub')
         if email is None:
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
 
-    result = await db.execute(select(Users).where(Users.email == email))
+    result = await db.execute(select(Users).where(Users.email==email))
     user = result.scalar_one_or_none()
-
     if user is None:
         raise credentials_exception
     return user
-
-
 async def authenticate_user(email: str, password: str, db: AsyncSession):
     result = await db.execute(select(Users).where(Users.email == email))
     user = result.scalar_one_or_none()
-    if not user():
+
+    if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
     return user
+

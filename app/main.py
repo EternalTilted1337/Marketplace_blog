@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Request
+
+from app.core.middleware import AuthCookieMiddleware
 from app.routers.auth import router as auth_router
 from app.routers.articles import router as articles_router
 from app.routers.comments import router as comments_router
@@ -16,17 +18,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuthCookieMiddleware)
 
-@app.middleware("http")
-async def extract_token_from_cookie(request: Request, call_next):
+@app.middleware('http')
+async def extrace_token_from_cookie(request:Request, call_next):
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         token = request.cookies.get("access_token")
         if token:
-            request.scope["headers"].append((b"authorization", token.encode("ascii")))
+            request.scope["headers"].append((b"authorization", f"Bearer {token}".encode("ascii")))
     response = await call_next(request)
     return response
-
 
 app.include_router(auth_router)
 app.include_router(articles_router)

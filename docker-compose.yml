@@ -66,6 +66,12 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     command: server /data --console-address ":9001"
 
+  mailhog:
+    image: mailhog/mailhog
+    container_name: marketplace_mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 volumes:
   postgres_data:
   rabbitmq_data:
