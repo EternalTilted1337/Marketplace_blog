@@ -32,11 +32,11 @@ async def create_articles(
     result = await db.execute(category_stmt)
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Категория не найдена")
-    # try:
-    #     image_url = await upload_image_to_s3(image)
-    # except Exception:
-    #     raise HTTPException(status_code=500, detail="Ошибка загрузки изображения в S3")
-    image_url = "http://localhost:9000/images/test.png"
+    try:
+        image_url = await upload_image_to_s3(image)
+    except Exception as e:
+        print(f"S3 Error: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки изображения в S3")
     new_article = Articles(
         title=title,
         content=content,
