@@ -4,50 +4,39 @@ from sqlalchemy import pool, create_engine
 from alembic import context
 from dotenv import load_dotenv
 
-# 1. Импортируем твой Base и модели
+
 import sys
 from os.path import abspath, dirname
 
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 from app.models import Base
 
-# 2. Загружаем переменные окружения
+
 load_dotenv()
 
-# 3. Настройка логирования
+
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 4. Указываем метаданные моделей
+
 target_metadata = Base.metadata
-
-
-def run_migrations_offline() -> None:
-    """Оффлайн режим"""
-    url = os.getenv("DATABASE_URL")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
 
 
 def run_migrations_online() -> None:
     """Онлайн режим (наш случай)"""
 
-    # Берем URL напрямую из .env
-    database_url = os.getenv("DATABASE_URL")
+    database_url = os.getenv("ALEMBIC_DATABASE_URL") or os.getenv("DATABASE_URL")
 
-    # --- ИСПРАВЛЕНИЕ ---
-    # Если используется asyncpg, заменяем его на psycopg для синхронной работы Alembic
-    if database_url and database_url.startswith("postgresql+asyncpg"):
-        database_url = database_url.replace("+asyncpg", "+psycopg")
-    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+    if "db:5432" in database_url:
+        database_url = database_url.replace("db:5432", "localhost:5435")
+
+
+    if database_url and "postgresql+asyncpg" in database_url:
+        database_url = database_url.replace("postgresql+asyncpg", "postgresql+psycopg")
+    elif database_url and database_url.startswith("postgresql://"):
+
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://")
 
     connectable = create_engine(
         database_url,
@@ -62,9 +51,3 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()

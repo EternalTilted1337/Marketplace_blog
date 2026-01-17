@@ -1,12 +1,10 @@
 from fastapi import FastAPI, Request
 
-from app.core.middleware import AuthCookieMiddleware
 from app.routers.auth import router as auth_router
 from app.routers.articles import router as articles_router
 from app.routers.comments import router as comments_router
 from app.routers.categories import router as categories_router
 from fastapi.middleware.cors import CORSMiddleware
-
 
 app = FastAPI(title="Marketplace Blog")
 
@@ -17,8 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(AuthCookieMiddleware)
 
 @app.middleware('http')
 async def extrace_token_from_cookie(request:Request, call_next):
@@ -39,3 +35,4 @@ app.include_router(categories_router)
 @app.get("/", tags=["Root"])
 async def root():
     return {"message": "Welcome to Marketplace blog"}
+

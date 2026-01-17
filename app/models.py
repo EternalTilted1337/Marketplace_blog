@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import Text, String, func, DateTime, ForeignKey, Integer
+from sqlalchemy import Text, String, func, DateTime, ForeignKey, Integer, Index, Column, Computed
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -22,12 +23,24 @@ class Articles(Base):
     )
     is_published: Mapped[bool | None] = mapped_column(default=False)
 
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id"))
-
+    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("categories.id"))
     owner: Mapped["Users"] = relationship("Users", back_populates="articles")
     category: Mapped["Categories"] = relationship(
         "Categories", back_populates="articles"
+    )
+
+    ts_vector = Column(
+        "ts_vector",
+        TSVECTOR,
+        Computed(
+            "to_tsvector('russian', title || ' ' || content)",
+            persisted=True,
+        ),
+    )
+
+    __table_args__ = (
+        Index('ix_articles_ts_vector', "ts_vector", postgresql_using='gin'),
     )
     comments: Mapped[list["Comments"]] = relationship(
         "Comments", back_populates="article"
@@ -52,10 +65,10 @@ class Comments(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    article_id: Mapped[int] = mapped_column(
+    article_id: Mapped[int] = mapped_column(Integer,
         ForeignKey("articles.id", ondelete="CASCADE")
     )
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    author_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
 
     article: Mapped["Articles"] = relationship(back_populates="comments")
     author: Mapped["Users"] = relationship(back_populates="comments")

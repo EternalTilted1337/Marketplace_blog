@@ -49,6 +49,13 @@ class ArticleCreate(BaseModel):
     is_published: bool = False
 
 
+class ArticleUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=2, max_length=50)
+    content: Optional[str] = None
+    category_id: Optional[int] = None
+    is_published: Optional[bool] = None
+
+
 class ArticleRead(BaseModel):
     id: int
     title: str

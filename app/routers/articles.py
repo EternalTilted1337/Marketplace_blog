@@ -8,7 +8,7 @@ from app.core.security import (
 )
 from app.db import get_db
 from app.models import Articles, Users, Categories, DeleteArticles
-from app.schemas import ArticleCreate, ArticleRead
+from app.schemas import ArticleUpdate, ArticleRead
 from sqlalchemy.orm import selectinload
 from app.tasks import process_new_article_notification
 
@@ -32,10 +32,11 @@ async def create_articles(
     result = await db.execute(category_stmt)
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Категория не найдена")
-    try:
-        image_url = await upload_image_to_s3(image)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Ошибка загрузки изображения в S3")
+    # try:
+    #     image_url = await upload_image_to_s3(image)
+    # except Exception:
+    #     raise HTTPException(status_code=500, detail="Ошибка загрузки изображения в S3")
+    image_url = "http://localhost:9000/images/test.png"
     new_article = Articles(
         title=title,
         content=content,
@@ -46,12 +47,17 @@ async def create_articles(
     )
     db.add(new_article)
     await db.commit()
-    await db.refresh(new_article)
+    final_query = (
+        select(Articles)
+        .where(Articles.id == new_article.id)
+        .options(selectinload(Articles.category), selectinload(Articles.owner))
+    )
+    final_result = await db.execute(final_query)
+    article_with_relations = final_result.scalar_one()
 
-    process_new_article_notification.delay(new_article.id, new_article.title)
+    process_new_article_notification.delay(article_with_relations.id, article_with_relations.title)
 
-    await db.refresh(new_article, ["category", "owner"])  # Подгружаем связанные модели
-    return new_article
+    return article_with_relations
 
 
 @router.get("/my", response_model=list[ArticleRead], summary="Получение моих статей")
@@ -61,7 +67,11 @@ async def get_my_articles(
     """
     Возвращает список статей, которые написал пользователь
     """
-    query = select(Articles).where(Articles.owner_id == current_user.id)
+    query = (
+        select(Articles)
+        .where(Articles.owner_id == current_user.id)
+        .options(selectinload(Articles.category), selectinload(Articles.owner))  # Добавили загрузку
+    )
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -89,12 +99,9 @@ async def get_articles(
     )
     if category_id:
         query = query.where(Articles.category_id == category_id)
-    if search:
-        search_vector = func.to_tsvector(
-            "russian", Articles.title + " " + Articles.content
-        )
+
         search_query = func.plainto_tsquery("russian", search)
-        query = query.where(search_vector.op("@@")(search_query))
+        query = query.where(Articles.ts_vector.op("@@")(search_query))
     query = query.order_by(Articles.created_at.desc()).limit(page_size).offset(offset)
 
     result = await db.execute(query)
@@ -113,7 +120,10 @@ async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db))
     query = (
         select(Articles)
         .where(Articles.id == article_id)
-        .options(selectinload(Articles.owner))
+        .options(
+            selectinload(Articles.owner),
+            selectinload(Articles.category)  # ДОБАВЬ ЭТУ СТРОКУ
+        )
     )
     result = await db.execute(query)
     article = result.scalar_one_or_none()
@@ -125,12 +135,12 @@ async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db))
 @router.put("/{article_id}", response_model=ArticleRead, summary="Обновление статьи")
 async def update_article(
     article_id: int,
-    article_data: ArticleCreate,
+    article_data: ArticleUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: Users = Depends(get_current_user),
 ):
     """
-    Обновляет заголовок, либо контент статьи.Доступно только автору
+    Обновляет статью. Можно изменять любые поля. Доступно только автору.
     """
     result = await db.execute(select(Articles).where(Articles.id == article_id))
     article = result.scalar_one_or_none()
@@ -139,15 +149,28 @@ async def update_article(
     if article.owner_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Нет прав на редактирование этой статьи. Вы не автор",
+            detail="Нет прав на редактирование",)
+    if article_data.category_id is not None:
+        cat_check = await db.execute(
+            select(Categories).where(Categories.id == article_data.category_id)
         )
-    article.title = article_data.title
-    article.content = article_data.content
-    article.is_published = article_data.is_published
-    await db.commit()
-    await db.refresh(article)
-    return article
+        if not cat_check.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Категория не найдена")
 
+    update_data = article_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(article, key, value)
+
+    await db.commit()
+    final_query = (
+        select(Articles)
+        .where(Articles.id == article_id)
+        .options(selectinload(Articles.category), selectinload(Articles.owner))
+    )
+    final_result = await db.execute(final_query)
+    updated_article = final_result.scalar_one()
+
+    return updated_article
 
 @router.delete("/{article_id}", status_code=204, summary="Удалить статью")
 async def delete_article(
@@ -167,7 +190,11 @@ async def delete_article(
             status_code=403, detail="Нет прав на удаление этой статьи. Вы не автор"
         )
     delete_log = DeleteArticles(
-        title=article.title, content=article.content, owner_id=article.owner_id
+        title=article.title,
+        content=article.content,
+        owner_id=article.owner_id,
+        original_id=article.id,
+        image_url=article.image_url
     )
     db.add(delete_log)
     await db.delete(article)
