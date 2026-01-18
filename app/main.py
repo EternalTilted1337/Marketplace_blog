@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-
+from app.core.middleware import AuthCookieMiddleware
 from app.routers.auth import router as auth_router
 from app.routers.articles import router as articles_router
 from app.routers.comments import router as comments_router
@@ -26,6 +26,7 @@ async def extrace_token_from_cookie(request:Request, call_next):
     response = await call_next(request)
     return response
 
+app.add_middleware(AuthCookieMiddleware)
 app.include_router(auth_router)
 app.include_router(articles_router)
 app.include_router(comments_router)

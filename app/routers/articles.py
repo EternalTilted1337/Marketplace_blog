@@ -99,7 +99,7 @@ async def get_articles(
     )
     if category_id:
         query = query.where(Articles.category_id == category_id)
-
+    if search:
         search_query = func.plainto_tsquery("russian", search)
         query = query.where(Articles.ts_vector.op("@@")(search_query))
     query = query.order_by(Articles.created_at.desc()).limit(page_size).offset(offset)
@@ -180,6 +180,8 @@ async def delete_article(
 ):
     """
     Полностью удаляет статью из базы данных. Доступно только автору.
+    Выполняет "фейковое" удаление статьи, перемещая её в архив.
+     Доступно только автору.
     """
     result = await db.execute(select(Articles).where(Articles.id == article_id))
     article = result.scalar_one_or_none()

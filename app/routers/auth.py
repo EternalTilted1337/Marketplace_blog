@@ -61,7 +61,7 @@ async def login_for_access_token(
 
 
 
-@router.post('/login')
+@router.post('/login', summary='Авторизация пользователя')
 async def login(
         response: Response,
         form_data: OAuth2PasswordRequestForm = Depends(),

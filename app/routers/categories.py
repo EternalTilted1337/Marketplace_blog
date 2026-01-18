@@ -48,14 +48,14 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.get('/{category_id}', response_model=CategoryRead)
+@router.get('/{category_id}', response_model=CategoryRead, summary = 'Получение категории по ID')
 async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
     category = await db.get(Categories, category_id)
     if not category:
         raise HTTPException(status_code = 404, detail= 'Категория не найдена')
     return category
 
-@router.patch("/{category_id}", response_model=CategoryRead)
+@router.patch("/{category_id}", response_model=CategoryRead, summary = "Обновление категории")
 async def update_category(
         category_id: int,
         category_data: CategoryCreate,
@@ -69,7 +69,8 @@ async def update_category(
     await db.refresh(category)
     return category
 
-@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT, summary = 'Удаление категории')
+
 async def delete_category(category_id: int, db: AsyncSession = Depends(get_db)):
     category = await db.get(Categories, category_id)
     if not category:
