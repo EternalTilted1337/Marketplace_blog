@@ -56,3 +56,30 @@ tests/ — интеграционные и юнит-тесты.
 alembic/ — миграции базы данных.
 
 docker-compose.yml — конфигурация сервисов приложения и БД.
+
+
+### Проверка Swagger
+Если перейти по
+```aiexclude
+http://localhost:8000/docs
+```
+Может показать, что нет доступа, для его получения перейти
+
+```aiexclude
+http://lcoalhost:8000/auth
+```
+
+Теперь полнстью доступен
+```
+http://localhost:8000/docs
+```
+
+## Если происходит ошибка с S3
+
+Перейти 
+
+```http://localhost:9000```
+
+pas = minioadmin
+log = minioadmin
+Создать images. Повторить запрос

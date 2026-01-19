@@ -64,7 +64,7 @@ class ArticleRead(BaseModel):
     is_published: bool
     created_at: datetime
     updated_at: datetime
-    category_id: int
+    category_id: int | None
     owner_id: int
     category: Optional[CategoryRead] = None
     owner: Optional[UserRead] = None

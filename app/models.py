@@ -43,7 +43,10 @@ class Articles(Base):
         Index('ix_articles_ts_vector', "ts_vector", postgresql_using='gin'),
     )
     comments: Mapped[list["Comments"]] = relationship(
-        "Comments", back_populates="article"
+        "Comments",
+        back_populates="article",
+        cascade="all, delete-orphan",  # 1. Удалит комменты из базы вместе со статьей
+        passive_deletes=True  # 2. Позволит базе самой применить ON DELETE CASCADE
     )
 
 
