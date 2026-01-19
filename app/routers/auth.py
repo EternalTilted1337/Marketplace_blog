@@ -60,23 +60,19 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-
-@router.post('/login', summary='Авторизация пользователя')
+@router.post("/login", summary="Авторизация пользователя")
 async def login(
-        response: Response,
-        form_data: OAuth2PasswordRequestForm = Depends(),
-        db: AsyncSession = Depends(get_db),
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
-        raise HTTPException(status_code=400, detail ='Неверное имя пользователя или пароль')
+        raise HTTPException(
+            status_code=400, detail="Неверное имя пользователя или пароль"
+        )
 
     token = create_access_token(data={"sub": user.email})
 
-    response.set_cookie(
-        key='access_token',
-        value=token,
-        httponly=True,
-        samesite='lax'
-    )
-    return {'message':'Успешный вход'}
+    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
+    return {"message": "Успешный вход"}

@@ -3,6 +3,7 @@ from email.message import EmailMessage
 from app.core.celery import celery_app
 import os
 
+
 @celery_app.task
 def process_new_article_notification(article_id: int, title: str):
     """
@@ -28,7 +29,9 @@ def send_registration_email(email: str):
     msg["Subject"] = "Регистрация в Marketplace Blog"
     msg["From"] = "admin@marketplace.com"
     msg["To"] = email
-    msg.set_content(f"Поздравляем! Вы успешно зарегистрированы на нашей платформе с адресом {email}.")
+    msg.set_content(
+        f"Поздравляем! Вы успешно зарегистрированы на нашей платформе с адресом {email}."
+    )
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:

@@ -55,7 +55,9 @@ async def create_articles(
     final_result = await db.execute(final_query)
     article_with_relations = final_result.scalar_one()
 
-    process_new_article_notification.delay(article_with_relations.id, article_with_relations.title)
+    process_new_article_notification.delay(
+        article_with_relations.id, article_with_relations.title
+    )
 
     return article_with_relations
 
@@ -70,7 +72,9 @@ async def get_my_articles(
     query = (
         select(Articles)
         .where(Articles.owner_id == current_user.id)
-        .options(selectinload(Articles.category), selectinload(Articles.owner))  # Добавили загрузку
+        .options(
+            selectinload(Articles.category), selectinload(Articles.owner)
+        )  # Добавили загрузку
     )
     result = await db.execute(query)
     return result.scalars().all()
@@ -122,7 +126,7 @@ async def get_article_by_id(article_id: int, db: AsyncSession = Depends(get_db))
         .where(Articles.id == article_id)
         .options(
             selectinload(Articles.owner),
-            selectinload(Articles.category)  # ДОБАВЬ ЭТУ СТРОКУ
+            selectinload(Articles.category),  # ДОБАВЬ ЭТУ СТРОКУ
         )
     )
     result = await db.execute(query)
@@ -149,7 +153,8 @@ async def update_article(
     if article.owner_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Нет прав на редактирование",)
+            detail="Нет прав на редактирование",
+        )
     if article_data.category_id is not None:
         cat_check = await db.execute(
             select(Categories).where(Categories.id == article_data.category_id)
@@ -171,6 +176,7 @@ async def update_article(
     updated_article = final_result.scalar_one()
 
     return updated_article
+
 
 @router.delete("/{article_id}", status_code=204, summary="Удалить статью")
 async def delete_article(
@@ -196,7 +202,7 @@ async def delete_article(
         content=article.content,
         owner_id=article.owner_id,
         original_id=article.id,
-        image_url=article.image_url
+        image_url=article.image_url,
     )
     db.add(delete_log)
     await db.delete(article)

@@ -20,11 +20,11 @@ async def upload_image_to_s3(file: UploadFile) -> str:
     """
     session = aioboto3.Session()
     async with session.client(
-            "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=ACCESS_KEY,
-            aws_secret_access_key=SECRET_KEY,
-            config=Config(s3={'addressing_style': 'path'})
+        "s3",
+        endpoint_url=ENDPOINT_URL,
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY,
+        config=Config(s3={"addressing_style": "path"}),
     ) as s3:
         unique_filename = f"{uuid.uuid4()}_{file.filename}"
         file_path = f"articles/{unique_filename}"
