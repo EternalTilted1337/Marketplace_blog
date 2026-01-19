@@ -1,0 +1,78 @@
+services:
+  # --- Основное приложение (FastAPI) ---
+  app:
+    build: .
+    container_name: marketplace_app
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - .:/app  # Прокидываем код внутрь, чтобы работала авто-перезагрузка
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - mq
+      - s3
+
+  # --- Celery Worker (Фоновые задачи) ---
+  worker:
+    build: .
+    container_name: marketplace_worker
+    working_dir: /app
+    command: celery -A app.core.celery worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - mq
+
+  # --- База данных (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine
+    container_name: marketplace_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # --- Брокер сообщений (RabbitMQ) ---
+  mq:
+    image: rabbitmq:3-management-alpine
+    container_name: marketplace_mq
+    ports:
+      - "5672:5672"   # Для общения сервисов
+      - "15672:15672" # Веб-интерфейс (логин/пароль: guest/guest)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # --- S3 Хранилище (Minio) ---
+  s3:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+  # --- Отправка сообщений при регистрации (mailhog) ---
+  mailhog:
+    image: mailhog/mailhog
+    container_name: marketplace_mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  minio_data:
