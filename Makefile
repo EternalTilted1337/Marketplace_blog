@@ -46,20 +46,24 @@ down:
 # --- Локальный запуск ---
 # Эта команда запускает приложение на хост-машине, но зависит от сервисов (например, БД) из docker-compose
 run: up
-	$(PYTHON) -m uvicorn app.main:app --reload
+	@echo "Приложение уже запущено в Docker. Логи:"
+	docker-compose logs -f app
 
 # --- Alembic миграции ---
 migrate:
-	$(PYTHON) -m alembic upgrade head
+	docker-compose exec app alembic upgrade head
 
 # Добавлено значение по умолчанию для `msg`, чтобы избежать ошибок
 
 create:
-	$(PYTHON) -m alembic revision --autogenerate -m "$(msg)"
+	docker-compose exec app alembic revision --autogenerate -m "$(msg)"
 
 # --- Ruff линтер и форматтер ---
 lint:
-	$(PYTHON) -m ruff check app
+	docker-compose exec app python -m ruff check app
 
 format:
-	$(PYTHON) -m ruff format app
+	docker-compose exec app python -m ruff format app
+
+test:
+	docker-compose exec app python -m pytest
